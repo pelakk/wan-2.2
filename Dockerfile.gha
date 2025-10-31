@@ -1,42 +1,56 @@
 # ----------- STAGE 1: BASE TORCH ----------
 FROM pytorch/pytorch:2.4.1-cuda12.4-cudnn9-runtime AS base
 
+# 🔹 Wyłącz interaktywne pytania podczas instalacji pakietów
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 🔹 Zainstaluj podstawowe zależności i wyczyść po sobie
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git python3-opencv && \
+    git python3-opencv tzdata && \
     rm -rf /var/lib/apt/lists/*
 
+# 🔹 Ustaw strefę czasową (opcjonalne)
+RUN ln -fs /usr/share/zoneinfo/Europe/Warsaw /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
+
+# 🔹 Zainstaluj lekkie zależności Pythona
 RUN pip install --no-cache-dir opencv-python numpy==2.2.6
 
 WORKDIR /ComfyUI
 
-# ----------- STAGE 2: FINAL ----------
-FROM base AS final
 
-WORKDIR /ComfyUI
+# ----------- STAGE 2: COMFYUI SETUP ----------
+FROM base AS comfyui
 
-COPY . .
+# 🔹 Sklonuj repozytorium ComfyUI
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git .
 
-# Klonujemy pluginy w sposób lekki
-RUN set -eux; \
-    mkdir -p /ComfyUI/custom_nodes; \
-    cd /ComfyUI/custom_nodes; \
-    for repo in \
-        https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git \
-        https://github.com/kijai/ComfyUI-KJNodes.git \
-        https://github.com/rgthree/rgthree-comfy.git \
-        https://github.com/JPS-GER/ComfyUI-JPS-Nodes.git \
-        https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git \
-        https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git \
-        https://github.com/ltdrdata/ComfyUI-Impact-Pack.git \
-        https://github.com/Fannovel16/comfyui_controlnet_aux.git \
-        https://github.com/yolain/ComfyUI-Easy-Use.git \
-        https://github.com/kijai/ComfyUI-Florence2.git \
-        https://github.com/WASasquatch/was-node-suite-comfyui.git \
-        https://github.com/theUpsider/ComfyUI-Logic.git \
-        https://github.com/cubiq/ComfyUI_essentials.git \
-        https://github.com/chflame163/ComfyUI_LayerStyle.git; \
-    do \
-        git clone --depth 1 "$repo" || echo "⚠️ Failed: $repo"; \
-    done
+# 🔹 Zainstaluj zależności ComfyUI
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN echo "✅ ComfyUI custom nodes installed successfully"
+
+# ----------- STAGE 3: PLUGINS ----------
+FROM comfyui AS plugins
+
+# 🔹 Skopiuj pluginy (jeśli masz lokalne foldery)
+# COPY custom_nodes /ComfyUI/custom_nodes
+
+# 🔹 Przykładowe klonowanie kilku popularnych wtyczek
+RUN mkdir -p /ComfyUI/custom_nodes && cd /ComfyUI/custom_nodes && \
+    git clone https://github.com/pythongosssss/ComfyUI-Custom-Scripts.git && \
+    git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
+    git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git
+
+
+# ----------- STAGE 4: FINAL CLEANUP ----------
+FROM plugins AS final
+
+# 🔹 Usuń niepotrzebne dane, żeby build przeszedł na GitHub Actions
+RUN apt-get clean && \
+    rm -rf /root/.cache && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -rf /tmp/*
+
+EXPOSE 8188
+
+CMD ["python3", "main.py", "--listen", "0.0.0.0"]
