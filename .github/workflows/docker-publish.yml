@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - main
-      - master  # jeśli masz inny branch, zmień tu
+      - master
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,11 +20,7 @@ jobs:
         run: |
           echo "Before cleanup:"
           df -h
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost /opt/hostedtoolcache/CodeQL
           sudo docker image prune -af || true
           echo "After cleanup:"
           df -h
@@ -37,10 +34,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 🔹 Właściwy build i push obrazu
-      - name: Build and push image
+      - name: Build and push lightweight image
         uses: docker/build-push-action@v6
         with:
+          file: Dockerfile.gha
           context: .
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/pelak-wan:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
