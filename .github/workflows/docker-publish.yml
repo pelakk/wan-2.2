@@ -14,6 +14,20 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # 🔹 Zwolnienie miejsca na runnerze (ważne przy torch/cu128)
+      - name: Free disk space
+        run: |
+          echo "Before cleanup:"
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune -af || true
+          echo "After cleanup:"
+          df -h
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -23,6 +37,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # 🔹 Właściwy build i push obrazu
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
