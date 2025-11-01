@@ -21,6 +21,8 @@ if [ -f "$TMPDIR/src/start.sh" ]; then
 	echo "Found start.sh in $TMPDIR/src — copying to /start.sh and executing"
 	cp "$TMPDIR/src/start.sh" /start.sh
 	chmod +x /start.sh
+	# Set environment variable so start.sh knows where the repo is
+	export CLONED_REPO_PATH="$TMPDIR"
 	exec /start.sh
 fi
 
@@ -31,6 +33,8 @@ if [ -d "/tmp/wanrepo" ]; then
 			echo "Found start.sh in ${candidate}/src — copying to /start.sh and executing"
 			cp "${candidate}/src/start.sh" /start.sh
 			chmod +x /start.sh
+			# Set environment variable so start.sh knows where the repo is
+			export CLONED_REPO_PATH="$candidate"
 			exec /start.sh
 		fi
 	done
