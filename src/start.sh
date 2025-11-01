@@ -317,6 +317,29 @@ fi
 
 echo "Finished downloading models!"
 
+# Copy workflows from GitHub repo to ComfyUI workflows directory
+echo "Copying workflows from GitHub repo..."
+
+# Clone repo to get workflows (if not already available)
+REPO_WORKFLOWS_DIR="/tmp/wan-repo-workflows"
+if [ ! -d "$REPO_WORKFLOWS_DIR" ]; then
+    echo "Cloning repo to get workflows..."
+    git clone https://github.com/pelakk/wan-2.2.git "$REPO_WORKFLOWS_DIR" || {
+        echo "Failed to clone repo for workflows"
+    }
+fi
+
+# Copy workflows if source exists
+if [ -d "$REPO_WORKFLOWS_DIR/workflows" ]; then
+    echo "Copying workflows from $REPO_WORKFLOWS_DIR/workflows to $WORKFLOW_DIR"
+    mkdir -p "$WORKFLOW_DIR"
+    cp -r "$REPO_WORKFLOWS_DIR/workflows"/* "$WORKFLOW_DIR/" 2>/dev/null || {
+        echo "No workflow files found to copy"
+    }
+    echo "✅ Workflows copied successfully!"
+else
+    echo "⚠️  No workflows directory found in repo"
+fi
 
 echo "Checking and copying workflow..."
 mkdir -p "$WORKFLOW_DIR"
